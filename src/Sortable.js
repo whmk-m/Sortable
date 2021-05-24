@@ -243,25 +243,43 @@ let dragEl,
 	},
 
 	_prepareGroup = function (options) {
+        /**
+         * 返回一个函数
+         * @param value 传入值
+         * @param pull 当前操作是否是pull:  往外拖拽
+         * @returns {function(*=, *=, *=, *=): (boolean|*)}
+         */
 		function toFn(value, pull) {
+            /**
+             * to: 拖拽的目标区域
+             * from: 拖拽的来源区域
+             * dragEl: 当前拖拽的元素
+             * evt: 自定义的事件对象
+             */
 			return function(to, from, dragEl, evt) {
+			    // 是否是同一个组织下的
 				let sameGroup = to.options.group.name &&
 								from.options.group.name &&
 								to.options.group.name === from.options.group.name;
 
+				// value 为 null或 undefined 时 也就是没有传入，且往外拖拽或者是相同组织，返回true
 				if (value == null && (pull || sameGroup)) {
 					// Default pull value
 					// Default pull and put value if same group
 					return true;
+				//	如果仅是没有传入value 或 传入为false 则返回false
 				} else if (value == null || value === false) {
 					return false;
+				// 如果当前是往外拖拽，且值为clone 则返回这个值
 				} else if (pull && value === 'clone') {
 					return value;
+				//如果传入的值时函数，则执行这个函数后拿到用户返回的值，再重新执行toFn后进行二次格式化value的值
 				} else if (typeof value === 'function') {
 					return toFn(value(to, from, dragEl, evt), pull)(to, from, dragEl, evt);
 				} else {
+				 // 如果是不同组织
 					let otherGroup = (pull ? to : from).options.group.name;
-
+                 // 如果value时true或者value是指向另一个组织或者value是一个数组并且包含另一个组织名称
 					return (value === true ||
 					(typeof value === 'string' && value === otherGroup) ||
 					(value.join && value.indexOf(otherGroup) > -1));
@@ -270,17 +288,21 @@ let dragEl,
 		}
 
 		let group = {};
+		// 传入的group属性副本
 		let originalGroup = options.group;
 
+		// 如果不是一个对象，则将其变成一个对象
 		if (!originalGroup || typeof originalGroup != 'object') {
 			originalGroup = {name: originalGroup};
 		}
 
 		group.name = originalGroup.name;
+		// checkPull -> pull  执行toFn后返回一个匿名函数，当在需要时调用checkPull后，将返回最终的值 booleal/array/string
 		group.checkPull = toFn(originalGroup.pull, true);
 		group.checkPut = toFn(originalGroup.put);
 		group.revertClone = originalGroup.revertClone;
 
+		// 处理完成后的group
 		options.group = group;
 	},
 
@@ -403,6 +425,7 @@ function Sortable(el, options) {
 		!(name in options) && (options[name] = defaults[name]);
 	}
 
+	// 初始化group属性
 	_prepareGroup(options);
 
 	// Bind all private methods

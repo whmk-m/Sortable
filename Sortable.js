@@ -419,13 +419,13 @@
    */
 
 
-  function getChild(el, childNum, options) {
+  function getChild(el, childNum, options, includeDragEl) {
     var currentChild = 0,
         i = 0,
         children = el.children;
 
     while (i < children.length) {
-      if (children[i].style.display !== 'none' && children[i] !== Sortable.ghost && children[i] !== Sortable.dragged && closest(children[i], options.draggable, el, false)) {
+      if (children[i].style.display !== 'none' && children[i] !== Sortable.ghost && (includeDragEl || children[i] !== Sortable.dragged) && closest(children[i], options.draggable, el, false)) {
         if (currentChild === childNum) {
           return children[i];
         }
@@ -1985,7 +1985,7 @@
           // If already at end of list: Do not insert
           if (elLastChild === dragEl) {
             return completed(false);
-          } // assign target only if condition is true
+          } // if there is a last element, it is the target
 
 
           if (elLastChild && el === evt.target) {
@@ -1999,6 +1999,24 @@
           if (_onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, !!target) !== false) {
             capture();
             el.appendChild(dragEl);
+            parentEl = el; // actualization
+
+            changed();
+            return completed(true);
+          }
+        } else if (elLastChild && _ghostIsFirst(evt, vertical, this)) {
+          var firstChild = getChild(el, 0, options, true);
+
+          if (firstChild === dragEl) {
+            return completed(false);
+          }
+
+          target = firstChild;
+          targetRect = getRect(target);
+
+          if (_onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, false) !== false) {
+            capture();
+            el.insertBefore(dragEl, firstChild);
             parentEl = el; // actualization
 
             changed();
@@ -2512,6 +2530,12 @@
 
   function _unsilent() {
     _silent = false;
+  }
+
+  function _ghostIsFirst(evt, vertical, sortable) {
+    var rect = getRect(getChild(sortable.el, 0, sortable.options));
+    var spacer = 10;
+    return vertical ? evt.clientX < rect.left - spacer || evt.clientY < rect.top && evt.clientX < rect.right : evt.clientY < rect.top - spacer || evt.clientY < rect.bottom && evt.clientX < rect.left;
   }
 
   function _ghostIsLast(evt, vertical, sortable) {
@@ -3472,7 +3496,8 @@
 
 
         if (dragStarted && this.isMultiDrag) {
-          // Do not "unfold" after around dragEl if reverted
+          folding = false; // Do not "unfold" after around dragEl if reverted
+
           if ((parentEl[expando].options.sort || parentEl !== rootEl) && multiDragElements.length > 1) {
             var dragRect = getRect(dragEl$1),
                 multiDragIndex = index(dragEl$1, ':not(.' + this.options.selectedClass + ')');
