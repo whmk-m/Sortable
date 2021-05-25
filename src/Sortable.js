@@ -112,6 +112,7 @@ let dragEl,
 
 	awaitingDragStarted = false,
 	ignoreNextClick = false,
+    // 存储拖拽的元素，是一个数组
 	sortables = [],
 
 	tapEvt,
@@ -145,6 +146,7 @@ let dragEl,
 	CSSFloatProperty = Edge || IE11OrLess ? 'cssFloat' : 'float',
 
 	// This will not pass for IE9, because IE9 DnD only works on anchors
+    // 判断是否支持web原生拖拽： document文档存在且不是在安卓和IOS客户端上，并且html元素上有dragable属性
 	supportDraggable = documentExists && !ChromeForAndroid && !IOS && ('draggable' in document.createElement('div')),
 
 	supportCssPointerEvents = (function() {
@@ -414,6 +416,7 @@ function Sortable(el, options) {
 		fallbackOnBody: false,
 		fallbackTolerance: 0,
 		fallbackOffset: {x: 0, y: 0},
+        // 是否支持指针事件
 		supportPointer: Sortable.supportPointer !== false && ('PointerEvent' in window) && !Safari,
 		emptyInsertThreshold: 5
 	};
@@ -428,16 +431,17 @@ function Sortable(el, options) {
 	// 初始化group属性
 	_prepareGroup(options);
 
-	// Bind all private methods
+	// Bind all private methods 将带有_的函数方法的this硬绑定到当前对象上
 	for (let fn in this) {
 		if (fn.charAt(0) === '_' && typeof this[fn] === 'function') {
 			this[fn] = this[fn].bind(this);
 		}
 	}
 
-	// Setup drag mode
+	// Setup drag mode 是否支持原生拖拽
 	this.nativeDraggable = options.forceFallback ? false : supportDraggable;
 
+	// 如果支持原生拖拽，触摸拖拽(移动端)启动阈值不能大于原生web上的dragstart阈值
 	if (this.nativeDraggable) {
 		// Touch start threshold cannot be greater than the native dragstart threshold
 		this.options.touchStartThreshold = 1;
@@ -445,17 +449,21 @@ function Sortable(el, options) {
 
 	// Bind events
 	if (options.supportPointer) {
+	    // 支持指针事件，则使用指针事件统一
 		on(el, 'pointerdown', this._onTapStart);
 	} else {
+	    // 不支持指针事件，则单独绑定 鼠标事件和触摸事件
 		on(el, 'mousedown', this._onTapStart);
 		on(el, 'touchstart', this._onTapStart);
 	}
 
+	// 支持原生拖拽，则绑定dragover dragenter事件
 	if (this.nativeDraggable) {
 		on(el, 'dragover', this);
 		on(el, 'dragenter', this);
 	}
 
+	// 存储该拖拽元素
 	sortables.push(this.el);
 
 	// Restore sorting
